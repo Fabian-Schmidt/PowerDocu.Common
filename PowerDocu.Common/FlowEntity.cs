@@ -6,6 +6,20 @@ namespace PowerDocu.Common
     {
         public string ID;
         public string Name;
+        public string FileName
+        {
+            get
+            {
+                if (!string.IsNullOrWhiteSpace(ID)) { return ID; }
+                if (Name.Length < 40)
+                {
+                    return Name;
+                }
+                var nameWithOutUid = Name[..^37];
+                return nameWithOutUid;
+            }
+        }
+
         public string Description;
         public Trigger trigger;
         public ActionGraph actions = new ActionGraph();
@@ -17,7 +31,7 @@ namespace PowerDocu.Common
 
         public void addTrigger(string name)
         {
-            this.trigger = new Trigger(name);
+            trigger = new Trigger(name);
         }
 
         public override string ToString()
