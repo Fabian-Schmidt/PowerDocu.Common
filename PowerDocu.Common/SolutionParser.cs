@@ -1,4 +1,3 @@
-using System;
 using System.IO;
 using System.IO.Compression;
 using System.Xml;
@@ -13,15 +12,15 @@ namespace PowerDocu.Common
             NotificationHelper.SendNotification(" - Processing " + filename);
             if (filename.EndsWith(".zip"))
             {
-                using FileStream stream = new FileStream(filename, FileMode.Open);
+                using var stream = new FileStream(filename, FileMode.Open, FileAccess.Read);
                 //process solution.xml
-                ZipArchiveEntry solutionDefinition = ZipHelper.getSolutionDefinitionFileFromZip(stream);
+                var solutionDefinition = ZipHelper.getSolutionDefinitionFileFromZip(stream);
                 if (solutionDefinition != null)
                 {
-                    string tempFile = Path.GetDirectoryName(filename) + @"\" + solutionDefinition.Name;
+                    var tempFile = Path.GetDirectoryName(filename) + @"\" + solutionDefinition.Name;
                     solutionDefinition.ExtractToFile(tempFile, true);
                     NotificationHelper.SendNotification("  - Processing solution ");
-                    using (FileStream appDefinition = new FileStream(tempFile, FileMode.Open))
+                    using (var appDefinition = new FileStream(tempFile, FileMode.Open))
                     {
                         {
                             parseSolutionDefinition(appDefinition);
@@ -30,13 +29,13 @@ namespace PowerDocu.Common
                     File.Delete(tempFile);
                 }
                 //process customizations.xml
-                ZipArchiveEntry customizationsDefinition = ZipHelper.getCustomizationsDefinitionFileFromZip(stream);
+                var customizationsDefinition = ZipHelper.getCustomizationsDefinitionFileFromZip(stream);
                 if (customizationsDefinition != null)
                 {
-                    string tempFile = Path.GetDirectoryName(filename) + @"\" + customizationsDefinition.Name;
+                    var tempFile = Path.GetDirectoryName(filename) + @"\" + customizationsDefinition.Name;
                     customizationsDefinition.ExtractToFile(tempFile, true);
                     NotificationHelper.SendNotification("  - Processing customizations.xml ");
-                    using (FileStream customizations = new FileStream(tempFile, FileMode.Open))
+                    using (var customizations = new FileStream(tempFile, FileMode.Open))
                     {
                         solution.Customizations = CustomizationsParser.parseCustomizationsDefinition(customizations);
                     }
@@ -51,14 +50,14 @@ namespace PowerDocu.Common
 
         private void parseSolutionDefinition(Stream solutionArchive)
         {
-            using StreamReader reader = new StreamReader(solutionArchive);
-            string solutionXML = reader.ReadToEnd();
-            XmlDocument solutionXmlDoc = new XmlDocument
+            using var reader = new StreamReader(solutionArchive);
+            var solutionXML = reader.ReadToEnd();
+            var solutionXmlDoc = new XmlDocument
             {
                 XmlResolver = null
             };
             solutionXmlDoc.LoadXml(solutionXML);
-            XmlNode solutionManifest = solutionXmlDoc.SelectSingleNode("/ImportExportXml/SolutionManifest");
+            var solutionManifest = solutionXmlDoc.SelectSingleNode("/ImportExportXml/SolutionManifest");
             solution = new SolutionEntity
             {
                 UniqueName = solutionManifest.SelectSingleNode("UniqueName").InnerText,
@@ -73,7 +72,7 @@ namespace PowerDocu.Common
                     CustomizationOptionValuePrefix = solutionManifest.SelectSingleNode("Publisher/CustomizationOptionValuePrefix").InnerText
                 }
             };
-            XmlNode publisherLocalizedNames = solutionManifest.SelectSingleNode("Publisher/LocalizedNames");
+            var publisherLocalizedNames = solutionManifest.SelectSingleNode("Publisher/LocalizedNames");
             if (publisherLocalizedNames != null)
             {
                 foreach (XmlNode localizedName in publisherLocalizedNames.ChildNodes)
@@ -82,12 +81,12 @@ namespace PowerDocu.Common
                                                 localizedName.Attributes.GetNamedItem("description")?.InnerText);
                 }
             }
-            XmlNode publisherAddresses = solutionManifest.SelectSingleNode("Publisher/Addresses");
+            var publisherAddresses = solutionManifest.SelectSingleNode("Publisher/Addresses");
             if (publisherAddresses != null)
             {
                 foreach (XmlNode xmlAddress in publisherAddresses.ChildNodes)
                 {
-                    Address address = new Address()
+                    var address = new Address()
                     {
                         AddressNumber = xmlAddress.SelectSingleNode("AddressNumber")?.InnerText,
                         AddressTypeCode = xmlAddress.SelectSingleNode("AddressTypeCode")?.InnerText,
@@ -119,7 +118,7 @@ namespace PowerDocu.Common
                     solution.Publisher.Addresses.Add(address);
                 }
             }
-            XmlNode publisherDescriptions = solutionManifest.SelectSingleNode("Publisher/Descriptions");
+            var publisherDescriptions = solutionManifest.SelectSingleNode("Publisher/Descriptions");
             if (publisherDescriptions != null)
             {
                 foreach (XmlNode description in publisherDescriptions.ChildNodes)
@@ -129,12 +128,12 @@ namespace PowerDocu.Common
                 }
             }
             //parsing the components
-            XmlNode rootComponents = solutionManifest.SelectSingleNode("RootComponents");
+            var rootComponents = solutionManifest.SelectSingleNode("RootComponents");
             if (rootComponents != null)
             {
                 foreach (XmlNode component in rootComponents.ChildNodes)
                 {
-                    SolutionComponent solutionComponent = new SolutionComponent()
+                    var solutionComponent = new SolutionComponent()
                     {
                         SchemaName = component.Attributes.GetNamedItem("schemaName")?.InnerText,
                         ID = component.Attributes.GetNamedItem("id")?.InnerText,
@@ -144,12 +143,12 @@ namespace PowerDocu.Common
                 }
             }
             //parsing the dependencies
-            XmlNode missingDependencies = solutionManifest.SelectSingleNode("MissingDependencies");
+            var missingDependencies = solutionManifest.SelectSingleNode("MissingDependencies");
             if (missingDependencies != null)
             {
                 foreach (XmlNode component in missingDependencies.ChildNodes)
                 {
-                    SolutionComponent required = new SolutionComponent()
+                    var required = new SolutionComponent()
                     {
                         SchemaName = component["Required"].Attributes.GetNamedItem("schemaName")?.InnerText,
                         reqdepDisplayName = component["Required"].Attributes.GetNamedItem("displayName")?.InnerText,
@@ -160,7 +159,7 @@ namespace PowerDocu.Common
                         reqdepIdSchemaName = component["Required"].Attributes.GetNamedItem("id.schemaname")?.InnerText,
                         Type = SolutionComponentHelper.GetComponentType(component["Required"].Attributes.GetNamedItem("type")?.InnerText)
                     };
-                    SolutionComponent dependent = new SolutionComponent()
+                    var dependent = new SolutionComponent()
                     {
                         SchemaName = component["Dependent"].Attributes.GetNamedItem("schemaName")?.InnerText,
                         reqdepDisplayName = component["Dependent"].Attributes.GetNamedItem("displayName")?.InnerText,
@@ -176,7 +175,7 @@ namespace PowerDocu.Common
             }
 
             //LocalizedNames
-            XmlNode localizedNames = solutionManifest.SelectSingleNode("LocalizedNames");
+            var localizedNames = solutionManifest.SelectSingleNode("LocalizedNames");
             if (localizedNames != null)
             {
                 foreach (XmlNode localizedName in localizedNames.ChildNodes)
@@ -186,7 +185,7 @@ namespace PowerDocu.Common
                 }
             }
             //Descriptions
-            XmlNode descriptions = solutionManifest.SelectSingleNode("LocalizedNames");
+            var descriptions = solutionManifest.SelectSingleNode("LocalizedNames");
             if (descriptions != null)
             {
                 foreach (XmlNode description in descriptions.ChildNodes)

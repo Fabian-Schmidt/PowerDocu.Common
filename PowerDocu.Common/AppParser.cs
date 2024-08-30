@@ -1,11 +1,11 @@
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System;
-using System.IO;
 using System.Collections.Generic;
+using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Text.RegularExpressions;
-using Newtonsoft.Json.Linq;
-using Newtonsoft.Json;
 
 namespace PowerDocu.Common
 {
@@ -25,18 +25,18 @@ namespace PowerDocu.Common
             NotificationHelper.SendNotification(" - Processing " + filename);
             if (filename.EndsWith(".zip"))
             {
-                using FileStream stream = new FileStream(filename, FileMode.Open);
-                List<ZipArchiveEntry> definitions = ZipHelper.getFilesInPathFromZip(stream, "", ".msapp");
+                using var stream = new FileStream(filename, FileMode.Open, FileAccess.Read);
+                var definitions = ZipHelper.getFilesInPathFromZip(stream, "", ".msapp");
                 packageType = PackageType.SolutionPackage;
-                foreach (ZipArchiveEntry definition in definitions)
+                foreach (var definition in definitions)
                 {
-                    string tempFile = Path.GetDirectoryName(filename) + @"\" + definition.Name;
+                    var tempFile = Path.GetDirectoryName(filename) + @"\" + definition.Name;
                     definition.ExtractToFile(tempFile, true);
                     NotificationHelper.SendNotification("  - Processing app " + definition.FullName);
-                    using (FileStream appDefinition = new FileStream(tempFile, FileMode.Open))
+                    using (var appDefinition = new FileStream(tempFile, FileMode.Open))
                     {
                         {
-                            AppEntity app = new AppEntity();
+                            var app = new AppEntity();
                             currentApp = app;
                             parseAppProperties(appDefinition);
                             parseAppControls(appDefinition);
@@ -52,9 +52,9 @@ namespace PowerDocu.Common
             {
                 NotificationHelper.SendNotification("  - Processing app " + filename);
                 packageType = PackageType.AppPackage;
-                AppEntity app = new AppEntity();
+                var app = new AppEntity();
                 currentApp = app;
-                using FileStream stream = new FileStream(filename, FileMode.Open);
+                using var stream = new FileStream(filename, FileMode.Open);
                 parseAppProperties(stream);
                 parseAppControls(stream);
                 parseAppDataSources(stream);
@@ -69,17 +69,17 @@ namespace PowerDocu.Common
 
         private void parseAppProperties(Stream appArchive)
         {
-            string[] filesToParse = new string[] { "Resources\\PublishInfo.json", "Header.json", "Properties.json" };
-            foreach (string fileToParse in filesToParse)
+            var filesToParse = new string[] { "Resources\\PublishInfo.json", "Header.json", "Properties.json" };
+            foreach (var fileToParse in filesToParse)
             {
-                using StreamReader reader = new StreamReader(ZipHelper.getFileFromZip(appArchive, fileToParse).Open());
-                string appJSON = reader.ReadToEnd();
+                using var reader = new StreamReader(ZipHelper.getFileFromZip(appArchive, fileToParse).Open());
+                var appJSON = reader.ReadToEnd();
                 var settings = new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All, MaxDepth = 128 };
                 var _jsonSerializer = JsonSerializer.Create(settings);
                 dynamic propertiesDefinition = JsonConvert.DeserializeObject<JObject>(appJSON, settings).ToObject(typeof(object), _jsonSerializer);
                 foreach (JToken property in propertiesDefinition.Children())
                 {
-                    JProperty prop = (JProperty)property;
+                    var prop = (JProperty)property;
                     currentApp.Properties.Add(Expression.parseExpressions(prop));
                     if (prop.Name.Equals("AppName"))
                     {
@@ -91,8 +91,8 @@ namespace PowerDocu.Common
                     }
                     if (prop.Name.Equals("LogoFileName") && !String.IsNullOrEmpty(prop.Value.ToString()))
                     {
-                        ZipArchiveEntry resourceFile = ZipHelper.getFileFromZip(appArchive, "Resources\\" + prop.Value.ToString());
-                        MemoryStream ms = new MemoryStream();
+                        var resourceFile = ZipHelper.getFileFromZip(appArchive, "Resources\\" + prop.Value.ToString());
+                        var ms = new MemoryStream();
                         resourceFile.Open().CopyTo(ms);
                         currentApp.ResourceStreams.Add(prop.Value.ToString(), ms);
                     }
@@ -102,18 +102,18 @@ namespace PowerDocu.Common
 
         private void parseAppControls(Stream appArchive)
         {
-            List<ZipArchiveEntry> controlFiles = ZipHelper.getFilesInPathFromZip(appArchive, "Controls", ".json");
+            var controlFiles = ZipHelper.getFilesInPathFromZip(appArchive, "Controls", ".json");
             //parse the controls. each controlFile represents a screen
-            foreach (ZipArchiveEntry controlEntry in controlFiles)
+            foreach (var controlEntry in controlFiles)
             {
-                using StreamReader reader = new StreamReader(controlEntry.Open());
-                string appJSON = reader.ReadToEnd();
+                using var reader = new StreamReader(controlEntry.Open());
+                var appJSON = reader.ReadToEnd();
                 var settings = new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All, MaxDepth = 128 };
                 var _jsonSerializer = JsonSerializer.Create(settings);
                 dynamic controlsDefinition = JsonConvert.DeserializeObject<JObject>(appJSON, settings).ToObject(typeof(object), _jsonSerializer);
                 currentApp.Controls.Add(parseControl(((JObject)controlsDefinition.TopParent).Children().ToList()));
             }
-            foreach (ControlEntity control in currentApp.Controls)
+            foreach (var control in currentApp.Controls)
             {
                 CheckVariableUsage(control);
             }
@@ -121,28 +121,28 @@ namespace PowerDocu.Common
 
         private ControlEntity parseControl(List<JToken> properties)
         {
-            ControlEntity controlEntity = new ControlEntity();
-            foreach (JToken property in properties)
+            var controlEntity = new ControlEntity();
+            foreach (var property in properties)
             {
                 if (property.GetType().Equals(typeof(JProperty)))
                 {
-                    JProperty prop = (JProperty)property;
+                    var prop = (JProperty)property;
                     if (prop.Name.Equals("Children"))
                     {
-                        JEnumerable<JToken> children = ((JArray)prop.Value).Children();
-                        foreach (JToken child in children)
+                        var children = ((JArray)prop.Value).Children();
+                        foreach (var child in children)
                         {
-                            ControlEntity childControLEntity = parseControl(child.Children().ToList());
+                            var childControLEntity = parseControl(child.Children().ToList());
                             controlEntity.Children.Add(childControLEntity);
                             childControLEntity.Parent = controlEntity;
                         }
                     }
                     else if (prop.Name.Equals("Rules"))
                     {
-                        JEnumerable<JToken> children = ((JArray)prop.Value).Children();
+                        var children = ((JArray)prop.Value).Children();
                         foreach (JObject child in children)
                         {
-                            Rule rule = new Rule();
+                            var rule = new Rule();
                             foreach (JProperty ruleProp in child.Children())
                             {
                                 switch (ruleProp.Name)
@@ -176,7 +176,7 @@ namespace PowerDocu.Common
                 }
                 else
                 {
-                    ControlEntity child = parseControl(((JObject)property).Children().ToList());
+                    var child = parseControl(((JObject)property).Children().ToList());
                     controlEntity.Children.Add(child);
                     child.Parent = controlEntity;
                 }
@@ -188,7 +188,7 @@ namespace PowerDocu.Common
                 controlEntity.Type = controlEntity.Properties.First(o => o.expressionOperator.Equals("VariantName")).expressionOperands[0].ToString();
             }
             //components can safely be identified through the Id of the template
-            string controlId = controlEntity.Properties.Where(e => e.expressionOperator == "Template")?.First().expressionOperands.Cast<Expression>().First(eo => eo.expressionOperator == "Id").expressionOperands[0].ToString();
+            var controlId = controlEntity.Properties.Where(e => e.expressionOperator == "Template")?.First().expressionOperands.Cast<Expression>().First(eo => eo.expressionOperator == "Id").expressionOperands[0].ToString();
             if (controlId.Equals("http://microsoft.com/appmagic/Component"))
             {
                 controlEntity.Type = "component";
@@ -198,7 +198,7 @@ namespace PowerDocu.Common
 
         private void CheckVariableUsage(ControlEntity control)
         {
-            foreach (Rule rule in control.Rules)
+            foreach (var rule in control.Rules)
             {
                 foreach (var globalVar in currentApp.GlobalVariables)
                 {
@@ -225,7 +225,7 @@ namespace PowerDocu.Common
                     }
                 }
             }
-            foreach (ControlEntity child in control.Children)
+            foreach (var child in control.Children)
             {
                 CheckVariableUsage(child);
             }
@@ -265,7 +265,7 @@ namespace PowerDocu.Common
             }
             else
             {
-                List<ControlPropertyReference> list = new List<ControlPropertyReference>
+                var list = new List<ControlPropertyReference>
                 {
                     new ControlPropertyReference() { Control = control, RuleProperty = property }
                 };
@@ -281,7 +281,7 @@ namespace PowerDocu.Common
             }
             else
             {
-                List<string> list = new List<string>
+                var list = new List<string>
                 {
                     destinationScreen
                 };
@@ -296,7 +296,7 @@ namespace PowerDocu.Common
             input = stripCodeComments(input);
 
             //Reference: https://docs.microsoft.com/en-us/powerapps/maker/canvas-apps/working-with-variables#types-of-variables
-            string code = input.Replace("\n", "").Replace("\r", "");
+            var code = input.Replace("\n", "").Replace("\r", "");
             MatchCollection matches;
             //check for Global Variables            
             if ((matches = Regex.Matches(code, @"\s*Set\(\s*(?<ident>\w+)\s*,")).Count > 0)
@@ -307,15 +307,15 @@ namespace PowerDocu.Common
                 }
             }
             //check for Context Variables
-            string codeWithSpacesRemoved = code.Replace(" ", "");
+            var codeWithSpacesRemoved = code.Replace(" ", "");
             if (codeWithSpacesRemoved.Contains("UpdateContext("))
             {
-                List<int> indexes = findAllIndexesOf(codeWithSpacesRemoved, "UpdateContext(");
-                foreach (int index in indexes)
+                var indexes = findAllIndexesOf(codeWithSpacesRemoved, "UpdateContext(");
+                foreach (var index in indexes)
                 {
                     if (!isWithinCodeComment(codeWithSpacesRemoved[0..index]))
                     {
-                        foreach (string var in extractContextVariableNames(codeWithSpacesRemoved[index..]))
+                        foreach (var var in extractContextVariableNames(codeWithSpacesRemoved[index..]))
                         {
                             currentApp.ContextVariables.Add(var);
                         }
@@ -325,28 +325,28 @@ namespace PowerDocu.Common
             if (codeWithSpacesRemoved.Contains("Navigate("))
             {
                 // As an optional third argument, pass a record that contains the context-variable name as a column name and the new value for the context variable.
-                List<int> indexes = findAllIndexesOf(codeWithSpacesRemoved, "Navigate(");
-                foreach (int index in indexes)
+                var indexes = findAllIndexesOf(codeWithSpacesRemoved, "Navigate(");
+                foreach (var index in indexes)
                 {
                     //only proceed if it is not within a comment
                     if (!isWithinCodeComment(codeWithSpacesRemoved[0..index]))
                     {
-                        string firstParam = "";
-                        string secondParam = "";
-                        string thirdParam = "";
-                        string navigateString = codeWithSpacesRemoved[index..];
-                        navigateString = navigateString[0..(findClosingCharacter(navigateString, '(', ')'))].Replace("Navigate(", "");
+                        var firstParam = "";
+                        var secondParam = "";
+                        var thirdParam = "";
+                        var navigateString = codeWithSpacesRemoved[index..];
+                        navigateString = navigateString[0..findClosingCharacter(navigateString, '(', ')')].Replace("Navigate(", "");
 
                         firstParam = extractNavigateParam(navigateString);
                         if (firstParam != navigateString)
                         {
-                            string navigateStringWithoutFirstParam = navigateString[(firstParam.Length + 1)..];
+                            var navigateStringWithoutFirstParam = navigateString[(firstParam.Length + 1)..];
                             secondParam = extractNavigateParam(navigateStringWithoutFirstParam);
                             if (secondParam != navigateStringWithoutFirstParam)
                             {
                                 //there's a third parameter!
                                 thirdParam = navigateStringWithoutFirstParam[(secondParam.Length + 1)..];
-                                foreach (string var in extractContextVariableNames(thirdParam))
+                                foreach (var var in extractContextVariableNames(thirdParam))
                                 {
                                     currentApp.ContextVariables.Add(var);
                                 }
@@ -387,7 +387,7 @@ namespace PowerDocu.Common
             //at least 2 commands found. We may or may not have 3 parameters in use here
             int closingBracketIndex;
             //find the first parameter: find the first comma (potentially after brackets)
-            char openingCharacter = 'C';
+            var openingCharacter = 'C';
             if (navigateString.IndexOf("(") == -1)
             {
                 if (navigateString.IndexOf("{") > -1)
@@ -426,9 +426,9 @@ namespace PowerDocu.Common
             else
             {
                 //brackets found. Need to find the first comma after the closing bracket
-                char closingCharacter = (openingCharacter == '(') ? ')' : '}';
+                var closingCharacter = (openingCharacter == '(') ? ')' : '}';
                 closingBracketIndex = findClosingCharacter(navigateString, openingCharacter, closingCharacter);
-                int commaPos = navigateString.IndexOf(',', closingBracketIndex);
+                var commaPos = navigateString.IndexOf(',', closingBracketIndex);
                 if (commaPos > -1)
                 {
                     //comma after closing character found!
@@ -446,15 +446,15 @@ namespace PowerDocu.Common
         private List<string> extractContextVariableNames(string code)
         {
             //todo: issue: code="If(2>1,{e:12},{e:43244})";
-            List<string> extractedVariables = new List<string>();
+            var extractedVariables = new List<string>();
             try
             {
-                string checkVariable = code;
+                var checkVariable = code;
                 if (code.StartsWith("UpdateContext"))
                 {
-                    string variableStart = code[code.IndexOf('{')..];
+                    var variableStart = code[code.IndexOf('{')..];
                     //need to find the closing bracket for UpdateContext
-                    int closingBracketIndex = findClosingCharacter(variableStart, '{', '}');
+                    var closingBracketIndex = findClosingCharacter(variableStart, '{', '}');
 
                     //we found the end of the current UpdateContext/Navigate. Time to extract the variable names defined here
                     checkVariable = (closingBracketIndex > 0) ? variableStart[..(closingBracketIndex + 1)] : variableStart;
@@ -468,9 +468,9 @@ namespace PowerDocu.Common
                 {
                     if (checkVariable.Contains('{') || checkVariable.Contains('('))
                     {
-                        int firstCurlyBracketIndex = checkVariable.IndexOf('{');
-                        int firstRoundBracketIndex = checkVariable.IndexOf('(');
-                        int firstCommaIndex = checkVariable.IndexOf(',');
+                        var firstCurlyBracketIndex = checkVariable.IndexOf('{');
+                        var firstRoundBracketIndex = checkVariable.IndexOf('(');
+                        var firstCommaIndex = checkVariable.IndexOf(',');
                         int closingCharacterIndex;
                         if (firstCurlyBracketIndex > -1 && ((firstRoundBracketIndex == -1) || (firstCurlyBracketIndex < firstRoundBracketIndex)))
                         {
@@ -496,11 +496,14 @@ namespace PowerDocu.Common
                         }
                         extractedVariables.Add(checkVariable[0..closingCharacterIndex].Split(":")[0].Trim().Replace("{", ""));
                         checkVariable = checkVariable[(closingCharacterIndex + ((closingCharacterIndex >= firstCommaIndex) ? 1 : 2))..];
-                        if (checkVariable.Length > 0 && checkVariable[0] == ',') checkVariable = checkVariable[1..];
+                        if (checkVariable.Length > 0 && checkVariable[0] == ',')
+                        {
+                            checkVariable = checkVariable[1..];
+                        }
                     }
                     else
                     {
-                        foreach (string variableSection in checkVariable.Split(','))
+                        foreach (var variableSection in checkVariable.Split(','))
                         {
                             //direct assignment of variables, they can be extracted right away
                             extractedVariables.Add(variableSection.Split(':')[0].Trim().Replace("{", ""));
@@ -518,8 +521,8 @@ namespace PowerDocu.Common
 
         private int findClosingCharacter(string content, char open, char close)
         {
-            bool closingBracketFound = false;
-            int currentClosingBracketIndex = content.IndexOf(close);
+            var closingBracketFound = false;
+            var currentClosingBracketIndex = content.IndexOf(close);
             if (currentClosingBracketIndex != -1)
             {
                 while (!closingBracketFound)
@@ -539,8 +542,8 @@ namespace PowerDocu.Common
 
         private bool isWithinCodeComment(string code)
         {
-            int lastOpeningCommentBrackets = code.LastIndexOf("/*");
-            int lastClosingCommentBrackets = code.LastIndexOf("*/");
+            var lastOpeningCommentBrackets = code.LastIndexOf("/*");
+            var lastClosingCommentBrackets = code.LastIndexOf("*/");
             //only proceed if the code is not within a comment
             // case 1: no opening comment brackets (/*), thus we return false
             // case 2: there is an opening bracket. if there is no matching closing bracket, that means we are within a comment and need to return true
@@ -563,7 +566,7 @@ namespace PowerDocu.Common
             var strings = @"""((\\[^\n]|[^""\n])*)""";
             var verbatimStrings = @"@(""[^""]*"")+";
 
-            string noComments = Regex.Replace(code,
+            var noComments = Regex.Replace(code,
                 blockComments + "|" + lineComments + "|" + strings + "|" + verbatimStrings,
                 me =>
                 {
@@ -585,15 +588,15 @@ namespace PowerDocu.Common
 
         private void parseAppDataSources(Stream appArchive)
         {
-            ZipArchiveEntry dataSourceFile = ZipHelper.getFileFromZip(appArchive, "References\\DataSources.json");
-            using StreamReader reader = new StreamReader(dataSourceFile.Open());
-            string appJSON = reader.ReadToEnd();
+            var dataSourceFile = ZipHelper.getFileFromZip(appArchive, "References\\DataSources.json");
+            using var reader = new StreamReader(dataSourceFile.Open());
+            var appJSON = reader.ReadToEnd();
             var settings = new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All, MaxDepth = 128 };
             var _jsonSerializer = JsonSerializer.Create(settings);
             dynamic datasourceDefinition = JsonConvert.DeserializeObject<JObject>(appJSON, settings).ToObject(typeof(object), _jsonSerializer);
             foreach (JToken datasource in datasourceDefinition.DataSources.Children())
             {
-                DataSource ds = new DataSource();
+                var ds = new DataSource();
                 foreach (JProperty prop in datasource.Children())
                 {
                     switch (prop.Name)
@@ -615,17 +618,17 @@ namespace PowerDocu.Common
 
         private void parseAppResources(Stream appArchive)
         {
-            string[] ResourceExtensions = new string[] { "jpg", "jpeg", "gif", "png", "bmp", "tif", "tiff", "svg" };
-            ZipArchiveEntry dataSourceFile = ZipHelper.getFileFromZip(appArchive, "References\\Resources.json");
-            using StreamReader reader = new StreamReader(dataSourceFile.Open());
-            string appJSON = reader.ReadToEnd();
+            var ResourceExtensions = new string[] { "jpg", "jpeg", "gif", "png", "bmp", "tif", "tiff", "svg" };
+            var dataSourceFile = ZipHelper.getFileFromZip(appArchive, "References\\Resources.json");
+            using var reader = new StreamReader(dataSourceFile.Open());
+            var appJSON = reader.ReadToEnd();
             var settings = new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All, MaxDepth = 128 };
             var _jsonSerializer = JsonSerializer.Create(settings);
             dynamic resourceDefinition = JsonConvert.DeserializeObject<JObject>(appJSON, settings).ToObject(typeof(object), _jsonSerializer);
             foreach (JToken resource in resourceDefinition.Resources.Children())
             {
-                Resource res = new Resource();
-                string pathToResource = "";
+                var res = new Resource();
+                var pathToResource = "";
                 foreach (JProperty prop in resource.Children())
                 {
                     switch (prop.Name)
@@ -650,11 +653,11 @@ namespace PowerDocu.Common
                 currentApp.Resources.Add(res);
                 if (res.ResourceKind == "LocalFile")
                 {
-                    string extension = pathToResource[(pathToResource.LastIndexOf('.') + 1)..].ToLower();
+                    var extension = pathToResource[(pathToResource.LastIndexOf('.') + 1)..].ToLower();
                     if (ResourceExtensions.Contains(extension))
                     {
-                        ZipArchiveEntry resourceFile = ZipHelper.getFileFromZip(appArchive, pathToResource);
-                        MemoryStream ms = new MemoryStream();
+                        var resourceFile = ZipHelper.getFileFromZip(appArchive, pathToResource);
+                        var ms = new MemoryStream();
                         resourceFile.Open().CopyTo(ms);
                         currentApp.ResourceStreams.Add(res.Name, ms);
                     }
@@ -669,12 +672,15 @@ namespace PowerDocu.Common
 
         public List<int> findAllIndexesOf(string str, string value)
         {
-            List<int> indexes = new List<int>();
-            for (int index = 0; ; index += value.Length)
+            var indexes = new List<int>();
+            for (var index = 0; ; index += value.Length)
             {
                 index = str.IndexOf(value, index);
                 if (index == -1)
+                {
                     return indexes;
+                }
+
                 indexes.Add(index);
             }
         }
