@@ -27,7 +27,7 @@ namespace PowerDocu.Common
 
         public string getPrimaryColumn()
         {
-            ColumnEntity primaryColumn = GetColumns().Find(o => o.getDisplayMask().Contains("PrimaryName"));
+            var primaryColumn = GetColumns().Find(o => o.getDisplayMask().Contains("PrimaryName"));
             return (primaryColumn != null)
                 ? primaryColumn.getDisplayName()
                 : "";
@@ -55,7 +55,7 @@ namespace PowerDocu.Common
 
         public bool containsNonDefaultLookupColumns()
         {
-            List<string> defaultLookupColumns = new List<string> { "createdby", "createdonbehalfby", "modifiedby", "modifiedonbehalfby", "ownerid", "owningbusinessunit", "owningteam", "owninguser" };
+            var defaultLookupColumns = new List<string> { "createdby", "createdonbehalfby", "modifiedby", "modifiedonbehalfby", "ownerid", "owningbusinessunit", "owningteam", "owninguser" };
             return GetColumns().Count(o => o.getDataType().Equals("Lookup") && !defaultLookupColumns.Contains(o.getLogicalName())) > 0;
         }
     }
@@ -112,7 +112,10 @@ namespace PowerDocu.Common
         {
             //todo this might not be the right field? Discrepancy in Let's Learn
             if (xmlColumn.SelectSingleNode("IsCustomizable") != null)
+            {
                 return xmlColumn.SelectSingleNode("IsCustomizable")?.InnerText.Equals("1") ?? false;
+            }
+
             return false;
         }
 
@@ -130,6 +133,11 @@ namespace PowerDocu.Common
         public string getDisplayMask()
         {
             return xmlColumn.SelectSingleNode("DisplayMask")?.InnerText ?? "";
+        }
+
+        public string getOptionSetName()
+        {
+            return xmlColumn.SelectSingleNode("OptionSetName")?.InnerText ?? "";
         }
     }
 }
