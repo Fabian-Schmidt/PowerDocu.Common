@@ -1,6 +1,6 @@
 using System;
-using System.Linq;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace PowerDocu.Common
 {
@@ -24,7 +24,7 @@ namespace PowerDocu.Common
 
         public string GetDisplayNameForComponent(SolutionComponent component)
         {
-            string name = component.Type switch
+            var name = component.Type switch
             {
                 "Canvas App" => Customizations.getAppNameBySchemaName(component.SchemaName),
                 "Workflow" => Customizations.getFlowNameById(component.ID),
@@ -77,6 +77,7 @@ namespace PowerDocu.Common
         public string UTCConversionTimeZoneCode;
     }
 
+    [System.Diagnostics.DebuggerDisplay("Type: {Type}; SchemaName: {SchemaName};")]
     public class SolutionComponent
     {
         public string Type;
@@ -107,7 +108,7 @@ namespace PowerDocu.Common
         public string Name;
         public string ID;
         public List<TableAccess> Tables = new List<TableAccess>();
-        public Dictionary<string,string> miscellaneousPrivileges = new Dictionary<string, string>();
+        public Dictionary<string, string> miscellaneousPrivileges = new Dictionary<string, string>();
     }
 
     public class TableAccess

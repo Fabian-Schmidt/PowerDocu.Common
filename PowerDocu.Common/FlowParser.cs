@@ -1,10 +1,9 @@
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 
 namespace PowerDocu.Common
 {
@@ -27,17 +26,17 @@ namespace PowerDocu.Common
             NotificationHelper.SendNotification(" - Processing " + filename);
             if (filename.EndsWith("zip", StringComparison.OrdinalIgnoreCase))
             {
-                using FileStream stream = new FileStream(filename, FileMode.Open);
-                List<ZipArchiveEntry> flowDefinitions = ZipHelper.getWorkflowFilesFromZip(stream);
+                using var stream = new FileStream(filename, FileMode.Open, FileAccess.Read);
+                var flowDefinitions = ZipHelper.getWorkflowFilesFromZip(stream);
                 //Getting any potential app definitions as well, so that we can define if the package is a simple Flow (only 1 FLow inside) or a Solution
-                List<ZipArchiveEntry> appDefinitions = ZipHelper.getFilesInPathFromZip(stream, "", ".msapp");
+                var appDefinitions = ZipHelper.getFilesInPathFromZip(stream, "", ".msapp");
                 packageType = (flowDefinitions.Count == 1 && appDefinitions.Count == 0) ? PackageType.FlowPackage : PackageType.SolutionPackage;
-                foreach (ZipArchiveEntry definition in flowDefinitions)
+                foreach (var definition in flowDefinitions)
                 {
-                    using StreamReader reader = new StreamReader(definition.Open());
+                    using var reader = new StreamReader(definition.Open());
                     NotificationHelper.SendNotification("  - Processing workflow definition " + definition.FullName);
-                    string definitionContent = reader.ReadToEnd();
-                    FlowEntity flow = parseFlow(definitionContent);
+                    var definitionContent = reader.ReadToEnd();
+                    var flow = parseFlow(definitionContent);
                     if (String.IsNullOrEmpty(flow.Name))
                     {
                         flow.Name = definition.Name.Replace(".json", "").Trim();
@@ -71,7 +70,7 @@ namespace PowerDocu.Common
             var settings = new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All, MaxDepth = 128 };
             var _jsonSerializer = JsonSerializer.Create(settings);
             flowDefinition = JsonConvert.DeserializeObject<JObject>(flowJSON, settings).ToObject(typeof(object), _jsonSerializer);
-            FlowEntity flow = new FlowEntity();
+            var flow = new FlowEntity();
             parseMetadata(flow);
             parseTrigger(flow);
             parseActions(flow, flowDefinition.properties.definition.actions.Children(), null);
@@ -95,11 +94,11 @@ namespace PowerDocu.Common
 		  */
         private void parseTrigger(FlowEntity flow)
         {
-            JProperty trigger = (JProperty)((JObject)flowDefinition.properties.definition.triggers).First;
+            var trigger = (JProperty)((JObject)flowDefinition.properties.definition.triggers).First;
             try
             {
                 flow.addTrigger(trigger.Name);
-                JObject triggerDetails = (JObject)trigger.Value;
+                var triggerDetails = (JObject)trigger.Value;
                 foreach (JProperty property in triggerDetails.Children())
                 {
                     switch (property.Name)
@@ -120,7 +119,7 @@ namespace PowerDocu.Common
                             break;
 
                         case "inputs":
-                            JObject inputs = (JObject)property.Value;
+                            var inputs = (JObject)property.Value;
                             parseInputObject(inputs.Children(), flow.trigger.Inputs, "trigger", ref flow.trigger.Connector);
                             break;
                         default:
@@ -155,7 +154,7 @@ namespace PowerDocu.Common
             var connectionReferences = flowDefinition.properties.connectionReferences.Children();
             foreach (JProperty connRef in connectionReferences)
             {
-                JObject cRefDetails = (JObject)connRef.Value;
+                var cRefDetails = (JObject)connRef.Value;
                 //if it's a connection reference
                 /* Example:
                 {"shared_commondataserviceforapps": {
@@ -208,8 +207,8 @@ namespace PowerDocu.Common
         {
             foreach (JProperty action in actions)
             {
-                JObject actionDetails = (JObject)action.Value;
-                ActionNode aNode = flow.actions.FindOrCreate(action.Name);
+                var actionDetails = (JObject)action.Value;
+                var aNode = flow.actions.FindOrCreate(action.Name);
                 foreach (JProperty property in actionDetails.Children())
                 {
                     switch (property.Name)
@@ -265,15 +264,15 @@ namespace PowerDocu.Common
                                 var runAfterNodes = property.Value.Children();
                                 foreach (JProperty raNode in runAfterNodes)
                                 {
-                                    ActionNode runAfterNode = flow.actions.FindOrCreate(raNode.Name);
+                                    var runAfterNode = flow.actions.FindOrCreate(raNode.Name);
                                     //array can contain Failed, Succeeded, Skipped, TimedOut
-                                    string[] raConditionsArray = raNode.Children().FirstOrDefault()?.ToObject<string[]>();
+                                    var raConditionsArray = raNode.Children().FirstOrDefault()?.ToObject<string[]>();
                                     flow.actions.AddEdge(runAfterNode, aNode, raConditionsArray);
                                 }
                             }
                             break;
                         case "else":
-                            JObject elseActions = (JObject)property.Value["actions"];
+                            var elseActions = (JObject)property.Value["actions"];
                             if (elseActions != null)
                             {
                                 parseActions(flow, elseActions.Children(), aNode, true);
@@ -355,7 +354,7 @@ namespace PowerDocu.Common
                 //handling ParseJson action nodes slightly differently. The schema node contains the JSON schema used by the action, so we simply add it directly as content instead of parsing it
                 if (Type?.Equals("ParseJson") == true && inputNode.Name.Equals("schema"))
                 {
-                    Expression expression = new Expression()
+                    var expression = new Expression()
                     {
                         expressionOperator = inputNode.Name
                     };
@@ -370,9 +369,9 @@ namespace PowerDocu.Common
                     {
                         //this is not a nice way, but works so far
                         //exported Flow
-                        JToken connectionToken = (JToken)inputNode.Value["connection"]?["name"];
+                        var connectionToken = inputNode.Value["connection"]?["name"];
                         //seen as part of a solution
-                        connectionToken ??= (JToken)inputNode.Value["apiId"];
+                        connectionToken ??= (inputNode.Value["apiId"]);
                         if (connectionToken != null)
                         {
                             conn = extractConnectorName(connectionToken.ToString());
@@ -390,7 +389,7 @@ namespace PowerDocu.Common
         private void updateOrderNumbers(List<ActionNode> actionNodes)
         {
             //only process it if it hasn't been processed already
-            foreach (ActionNode actionNode in actionNodes)
+            foreach (var actionNode in actionNodes)
             {
                 if (actionNode.Order == 0)
                 {

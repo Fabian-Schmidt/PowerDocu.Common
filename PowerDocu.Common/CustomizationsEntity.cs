@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Linq;
 using System.Xml;
 
 namespace PowerDocu.Common
@@ -42,10 +41,10 @@ namespace PowerDocu.Common
 
         public List<RoleEntity> getRoles()
         {
-            List<RoleEntity> roles = new List<RoleEntity>();
+            var roles = new List<RoleEntity>();
             foreach (XmlNode role in customizationsXml.SelectNodes("/ImportExportXml/Roles/Role"))
             {
-                RoleEntity roleEntity = new RoleEntity
+                var roleEntity = new RoleEntity
                 {
                     Name = role.Attributes.GetNamedItem("name")?.InnerText,
                     ID = role.Attributes.GetNamedItem("id")?.InnerText
@@ -57,7 +56,7 @@ namespace PowerDocu.Common
                     //<RolePrivilege name="prvAppendNote" level="Global" />
                     //<RolePrivilege name="prvAppendToadmin_App" level="Local" />
                     //<RolePrivilege name="prvAppendToadmin_PVA" level="Local" />
-                    string privilegeName = privilege.Attributes.GetNamedItem("name").InnerText;
+                    var privilegeName = privilege.Attributes.GetNamedItem("name").InnerText;
                     if (Privileges.GetMiscellaneousPrivileges().ContainsKey(privilegeName))
                     {
                         roleEntity.miscellaneousPrivileges.Add(privilegeName, privilege.Attributes.GetNamedItem("level").InnerText);
@@ -65,7 +64,7 @@ namespace PowerDocu.Common
                     else
                     {
                         privilegeName = privilegeName[3..];
-                        string priv = "";
+                        var priv = "";
                         if (privilegeName.StartsWith("Create"))
                         {
                             priv = "Create";
@@ -164,7 +163,7 @@ namespace PowerDocu.Common
 
         private void parseAccessLevel(RoleEntity roleEntity, string tableName, string privilege, string accessLevel)
         {
-            TableAccess tableAccess = roleEntity.Tables.Find(o => o.Name == tableName);
+            var tableAccess = roleEntity.Tables.Find(o => o.Name == tableName);
             if (tableAccess == null)
             {
                 tableAccess = new TableAccess
@@ -173,7 +172,7 @@ namespace PowerDocu.Common
                 };
                 roleEntity.Tables.Add(tableAccess);
             }
-            AccessLevel level = accessLevel switch
+            var level = accessLevel switch
             {
                 "Basic" => AccessLevel.Basic,
                 "Deep" => AccessLevel.Deep,
@@ -207,6 +206,14 @@ namespace PowerDocu.Common
                 case "Share":
                     tableAccess.Share = level;
                     break;
+            }
+        }
+
+        public IEnumerable<OptionSet> GetOptionSets()
+        {
+            foreach (XmlNode xmlEntity in customizationsXml.SelectNodes("/ImportExportXml/optionsets/optionset"))
+            {
+                yield return new OptionSet(xmlEntity);
             }
         }
     }
