@@ -89,7 +89,7 @@ namespace PowerDocu.Common
             return xmlColumn.SelectSingleNode("Type").InnerText switch
             {
                 "bit" => "Yes/No",
-                "datetime" => "Date and time",
+                "datetime" => "Date and Time",
                 "decimal" => "Decimal",
                 "file" => "File",
                 "float" => "Float",
@@ -106,6 +106,52 @@ namespace PowerDocu.Common
                 "uniqueidentifier" => "uniqueidentifier",
                 _ => xmlColumn.SelectSingleNode("Type").InnerText
             };
+        }
+
+        public string getFieldLength()
+        {
+            if (xmlColumn.SelectSingleNode("MaxLength") != null)
+            {
+                return xmlColumn.SelectSingleNode("MaxLength").InnerText;
+            }
+            else if (xmlColumn.SelectSingleNode("Type").InnerText == "datetime")
+            {
+                return xmlColumn.SelectSingleNode("Format").InnerText switch
+                {
+                    "date" => "Date Only",
+                    "datetime" => "Date and Time",
+                    _ => xmlColumn.SelectSingleNode("Format").InnerText
+                };
+            }
+            else if (xmlColumn.SelectSingleNode("Type").InnerText == "file")
+            {
+                return $"{xmlColumn.SelectSingleNode("MaxValue").InnerText} KB";
+            }
+            else if (xmlColumn.SelectSingleNode("MinValue") != null && xmlColumn.SelectSingleNode("MaxValue") != null)
+            {
+                var minValue = xmlColumn.SelectSingleNode("MinValue").InnerText;
+                var maxValue = xmlColumn.SelectSingleNode("MaxValue").InnerText;
+                // Check if the minValue or maxValue deviate from default values for the field type.
+                if (xmlColumn.SelectSingleNode("Type").InnerText == "int" &&
+                    (minValue != "-2147483648" || maxValue != "2147483647"))
+                {
+                    return $"{minValue} to {maxValue}";
+                }
+                if (xmlColumn.SelectSingleNode("Type").InnerText == "decimal" &&
+                    (
+                        (minValue != "-100000000000" && minValue != "1E-10")
+                        || maxValue != "100000000000")
+                    )
+                {
+                    return $"{minValue} to {maxValue}";
+                }
+                if (xmlColumn.SelectSingleNode("Type").InnerText == "money" &&
+                    (minValue != "-922337203685477" || maxValue != "922337203685477"))
+                {
+                    return $"{minValue} to {maxValue}";
+                }
+            }
+            return string.Empty;
         }
 
         public bool isCustomizable()
