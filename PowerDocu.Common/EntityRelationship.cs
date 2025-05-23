@@ -16,27 +16,33 @@ namespace PowerDocu.Common
             return xmlEntity.Attributes.GetNamedItem("Name")?.InnerText ?? "";
         }
 
-        public string getReferencingEntityName() {
+        public string getReferencingEntityName()
+        {
             return xmlEntity.SelectSingleNode("ReferencingEntityName")?.InnerText ?? "";
         }
 
-        public string getReferencedEntityName() {
+        public string getReferencedEntityName()
+        {
             return xmlEntity.SelectSingleNode("ReferencedEntityName")?.InnerText ?? "";
         }
 
-        public string getFirstEntityName() {
+        public string getFirstEntityName()
+        {
             return xmlEntity.SelectSingleNode("FirstEntityName")?.InnerText ?? "";
         }
 
-        public string getSecondEntityName() {
+        public string getSecondEntityName()
+        {
             return xmlEntity.SelectSingleNode("SecondEntityName")?.InnerText ?? "";
         }
 
-        public string getRelationshipType() {
+        public string getRelationshipType()
+        {
             return xmlEntity.SelectSingleNode("EntityRelationshipType")?.InnerText ?? "";
         }
 
-        public string getReferencingAttributeName() {
+        public string getReferencingAttributeName()
+        {
             return xmlEntity.SelectSingleNode("ReferencingAttributeName")?.InnerText ?? "";
 
         }

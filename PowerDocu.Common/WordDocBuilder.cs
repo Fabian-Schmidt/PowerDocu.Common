@@ -1,12 +1,12 @@
+using DocumentFormat.OpenXml;
+using DocumentFormat.OpenXml.Packaging;
+using DocumentFormat.OpenXml.Wordprocessing;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
-using DocumentFormat.OpenXml;
-using DocumentFormat.OpenXml.Packaging;
-using DocumentFormat.OpenXml.Wordprocessing;
 using A = DocumentFormat.OpenXml.Drawing;
 using A14 = DocumentFormat.OpenXml.Office2010.Drawing;
 using DW = DocumentFormat.OpenXml.Drawing.Wordprocessing;
@@ -430,7 +430,8 @@ namespace PowerDocu.Common
             pPr.ParagraphStyleId = new ParagraphStyleId() { Val = styleid };
         }
 
-        protected Table CreateTable() {
+        protected Table CreateTable()
+        {
             return CreateTable(BorderValues.Single, 1);
         }
 

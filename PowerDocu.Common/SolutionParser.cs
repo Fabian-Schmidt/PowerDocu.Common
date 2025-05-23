@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Xml;
@@ -45,7 +43,7 @@ namespace PowerDocu.Common
                 }
                 //process environment variable definitions
                 var environmentVariableDefinitionFiles = ZipHelper.getFilesInPathFromZip(stream, "environmentvariabledefinitions/", "environmentvariabledefinition.xml");
-                foreach(ZipArchiveEntry environmentVariableDefinition in environmentVariableDefinitionFiles)
+                foreach (ZipArchiveEntry environmentVariableDefinition in environmentVariableDefinitionFiles)
                 {
                     var tempFile = Path.GetDirectoryName(filename) + @"\" + environmentVariableDefinition.Name;
                     environmentVariableDefinition.ExtractToFile(tempFile, true);

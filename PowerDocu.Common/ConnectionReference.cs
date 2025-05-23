@@ -1,5 +1,3 @@
-using System;
-
 namespace PowerDocu.Common
 {
     public class ConnectionReference
