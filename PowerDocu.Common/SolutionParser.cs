@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Xml;
@@ -38,6 +40,20 @@ namespace PowerDocu.Common
                     using (var customizations = new FileStream(tempFile, FileMode.Open))
                     {
                         solution.Customizations = CustomizationsParser.parseCustomizationsDefinition(customizations);
+                    }
+                    File.Delete(tempFile);
+                }
+                //process environment variable definitions
+                var environmentVariableDefinitionFiles = ZipHelper.getFilesInPathFromZip(stream, "environmentvariabledefinitions/", "environmentvariabledefinition.xml");
+                foreach(ZipArchiveEntry environmentVariableDefinition in environmentVariableDefinitionFiles)
+                {
+                    var tempFile = Path.GetDirectoryName(filename) + @"\" + environmentVariableDefinition.Name;
+                    environmentVariableDefinition.ExtractToFile(tempFile, true);
+                    NotificationHelper.SendNotification("  - Processing environment variable definition ");
+                    using (var environmentVariableDefinitionStream = new FileStream(tempFile, FileMode.Open, FileAccess.Read))
+                    {
+                        var environmentVariable = EnvironmentVariableParser.parseEnvironmentVariableDefinition(environmentVariableDefinitionStream);
+                        solution.EnvironmentVariables.Add(environmentVariable);
                     }
                     File.Delete(tempFile);
                 }
@@ -136,7 +152,7 @@ namespace PowerDocu.Common
                     var solutionComponent = new SolutionComponent()
                     {
                         SchemaName = component.Attributes.GetNamedItem("schemaName")?.InnerText,
-                        ID = component.Attributes.GetNamedItem("id")?.InnerText,
+                        ID = component.Attributes.GetNamedItem("id")?.InnerText.Trim('{', '}'),
                         Type = SolutionComponentHelper.GetComponentType(component.Attributes.GetNamedItem("type")?.InnerText)
                     };
                     solution.Components.Add(solutionComponent);
@@ -153,7 +169,7 @@ namespace PowerDocu.Common
                         SchemaName = component["Required"].Attributes.GetNamedItem("schemaName")?.InnerText,
                         reqdepDisplayName = component["Required"].Attributes.GetNamedItem("displayName")?.InnerText,
                         reqdepSolution = component["Required"].Attributes.GetNamedItem("solution")?.InnerText,
-                        ID = component["Required"].Attributes.GetNamedItem("id")?.InnerText,
+                        ID = component["Required"].Attributes.GetNamedItem("id")?.InnerText.Trim('{', '}'),
                         reqdepParentDisplayName = component["Required"].Attributes.GetNamedItem("parentDisplayName")?.InnerText,
                         reqdepParentSchemaName = component["Required"].Attributes.GetNamedItem("parentSchemaName")?.InnerText,
                         reqdepIdSchemaName = component["Required"].Attributes.GetNamedItem("id.schemaname")?.InnerText,
@@ -164,7 +180,7 @@ namespace PowerDocu.Common
                         SchemaName = component["Dependent"].Attributes.GetNamedItem("schemaName")?.InnerText,
                         reqdepDisplayName = component["Dependent"].Attributes.GetNamedItem("displayName")?.InnerText,
                         Type = SolutionComponentHelper.GetComponentType(component["Dependent"].Attributes.GetNamedItem("type")?.InnerText),
-                        ID = component["Dependent"].Attributes.GetNamedItem("id")?.InnerText,
+                        ID = component["Dependent"].Attributes.GetNamedItem("id")?.InnerText.Trim('{', '}'),
                         reqdepParentDisplayName = component["Dependent"].Attributes.GetNamedItem("parentDisplayName")?.InnerText,
                         reqdepParentSchemaName = component["Dependent"].Attributes.GetNamedItem("parentSchemaName")?.InnerText,
                         reqdepIdSchemaName = component["Dependent"].Attributes.GetNamedItem("id.schemaname")?.InnerText,
